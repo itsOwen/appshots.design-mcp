@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.log
+
+# Never commit credentials — the stored Firebase session lives here.
+.appshots-mcp/
+auth.json
