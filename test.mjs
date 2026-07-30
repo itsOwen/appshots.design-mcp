@@ -6,6 +6,7 @@ import { AppshotsApiClient } from "./dist/services/api-client.js";
 import { AppshotsAuth } from "./dist/services/auth.js";
 import {
   isBlurredUrl,
+  titleCase,
   formatAppShots,
   formatScreens,
   formatFlows,
@@ -36,9 +37,21 @@ test("fetchImage guard accepts a real storage url", async () => {
 });
 
 test("blur detection", () => {
-  assert.equal(isBlurredUrl(`${OK.replace("/o/", "/o/blur/")}`), true);
+  assert.equal(isBlurredUrl(OK.replace("/o/", "/o/blur/")), true);
+  // storage urls percent-encode the path separators
+  assert.equal(isBlurredUrl("https://x/o/screens%2Fblur%2Fy.webp"), true);
   assert.equal(isBlurredUrl(OK), false);
+  assert.equal(isBlurredUrl("https://x/o/screens%2Fblurb%2Fy.webp"), false);
   assert.equal(isBlurredUrl(undefined), false);
+  assert.equal(isBlurredUrl("https://x/%E0%A4%A"), false); // malformed escape must not throw
+});
+
+test("titleCase normalizes any casing to the indexed form", () => {
+  assert.equal(titleCase("onboarding"), "Onboarding");
+  assert.equal(titleCase("ONBOARDING"), "Onboarding"); // all-caps must not pass through
+  assert.equal(titleCase("search bar"), "Search Bar");
+  assert.equal(titleCase("sign-up"), "Sign-Up");
+  assert.equal(titleCase("Empty State"), "Empty State");
 });
 
 test("formatters handle empty and populated responses", () => {

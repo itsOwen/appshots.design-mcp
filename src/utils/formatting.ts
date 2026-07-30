@@ -1,8 +1,21 @@
 import type { AppShot, PagedResponse, Screen } from "../types.js";
 
-// free-tier previews come from a /blur/ path; we flag and skip them
+// free-tier previews come from a /blur/ path. storage urls percent-encode the
+// separators (screens%2Fblur%2F...), so decode before looking.
 export function isBlurredUrl(url = ""): boolean {
-  return url.includes("/blur/");
+  let decoded = url;
+  try {
+    decoded = decodeURIComponent(url);
+  } catch {
+    // malformed escapes — fall back to the raw string
+  }
+  return /[/]blur[/]/i.test(decoded);
+}
+
+// tag/component values are indexed with mixed casing but matched exactly, so a
+// title-cased retry is what turns "onboarding"/"ONBOARDING" into "Onboarding"
+export function titleCase(s: string): string {
+  return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 const BLUR_TAG = " ⧗ blurred (free-tier preview — upgrade to view)";

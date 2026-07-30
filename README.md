@@ -2,7 +2,7 @@
 
 Unofficial MCP server for [appshots.design](https://appshots.design). Lets Claude search the library and actually look at the screenshots, so it can pull real design references instead of guessing.
 
-appshots has no public API — this talks to their backend (`be.appshots.design`) using your own account's Firebase session. You get back whatever your account can see: free tier means free-tier results (6 per page, some screens blurred), pro means the full thing.
+appshots has no public API — this talks to their backend (`be.appshots.design`) using your own account's Firebase session. You get back whatever your account can see.
 
 ## tools
 
@@ -81,7 +81,8 @@ Claude searches, pulls the screens as images, reasons over the real UI, and give
 
 ## notes
 
-- free tier is capped at 6 results/page and blurs screens past the limit; pro returns everything, no code change needed.
+- `per_page` defaults to 20 and is honored up to the number of matches — no free-tier cap showed up in testing. `search_flows` caps at 20 and `search_text_in_images` always returns 20 regardless of what you pass.
+- if a screen ever comes back as a blurred `/blur/` preview, `get_screens` skips it unless you pass `include_blurred: true`.
 - `search_by_tag` / `search_by_component` match whole tag values and the backend is case-sensitive; the server retries your query title-cased, so `onboarding` finds `Onboarding`. tags are free-form, so obscure terms still miss — fall back to `search_screens`.
 - appshots can change these endpoints whenever. it surfaces errors instead of hiding them.
 

@@ -22,8 +22,9 @@ export const ENDPOINTS = {
 export const PLATFORMS = ["ios", "android", "web"] as const;
 export type Platform = (typeof PLATFORMS)[number];
 
-// free is clamped to 6/page server-side; pro honors higher
-export const DEFAULT_PER_PAGE = 6;
+// per_page is honored up to the result count — no free-tier clamp observed.
+// flows caps at 20; search_text_in_images ignores it and always returns 20.
+export const DEFAULT_PER_PAGE = 20;
 export const DEFAULT_SCOPE = "global";
 
 export const TOKEN_REFRESH_BUFFER_SECONDS = 300;

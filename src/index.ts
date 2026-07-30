@@ -11,12 +11,12 @@ import {
   formatFlows,
   formatTextResults,
   isBlurredUrl,
+  titleCase,
 } from "./utils/formatting.js";
 import { readStoredSession, writeStoredSession } from "./utils/auth-store.js";
 import type { PagedResponse } from "./types.js";
 import { DEFAULT_PER_PAGE, DEFAULT_SCOPE, MAX_IMAGES_PER_CALL, PLATFORMS } from "./constants.js";
 
-// free is clamped to 6/page server-side; max is generous so pro isn't capped
 const searchShape = {
   query: z.string().min(1).describe("Search term. Required — an empty query returns nothing."),
   platform: z.enum(PLATFORMS).default("ios").describe("Platform to search"),
@@ -27,7 +27,10 @@ const searchShape = {
     .min(1)
     .max(100)
     .default(DEFAULT_PER_PAGE)
-    .describe("Results per page. Free is clamped to 6 by the server; PRO callers should pass higher."),
+    .describe(
+      "Results per page. Raise it for broader research; flows cap at 20 and " +
+        "search_text_in_images always returns 20 regardless.",
+    ),
   scope: z.string().default(DEFAULT_SCOPE).describe("Search scope. Non-'global' scopes are plan-gated."),
   app_slug: z.string().optional().describe("Restrict to a single app by its slug."),
 };
@@ -41,18 +44,23 @@ type SearchArgs = {
   app_slug?: string;
 };
 
-// tag/component matching is case-sensitive server-side ("onboarding" → 0 hits,
-// "Onboarding" → 43), so retry title-cased before reporting nothing
-const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
-
+// tag/component values are matched exactly and case-sensitively server-side
+// ("onboarding" → 0 hits, "Onboarding" → 43). the vocabulary is mixed-case
+// though ("login" and "Login" are both real tags), so try the query as given
+// and title-cased, and keep whichever matched more.
 async function screensCaseTolerant(
   search: (o: SearchOptions) => Promise<PagedResponse>,
   a: SearchArgs,
 ): Promise<PagedResponse> {
-  const first = await search(toOptions(a));
-  if ((first.screens as unknown[] | undefined)?.length) return first;
-  const retry = titleCase(a.query);
-  return retry === a.query ? first : search(toOptions({ ...a, query: retry }));
+  const cased = titleCase(a.query);
+  if (cased === a.query) return search(toOptions(a));
+
+  const rows = (r: PagedResponse) => (r.screens as unknown[] | undefined)?.length ?? 0;
+  const [asGiven, retitled] = await Promise.all([
+    search(toOptions(a)),
+    search(toOptions({ ...a, query: cased })),
+  ]);
+  return rows(retitled) > rows(asGiven) ? retitled : asGiven;
 }
 
 function toOptions(a: SearchArgs): SearchOptions {
@@ -98,8 +106,8 @@ async function main() {
     "appshots_search_screens",
     "Search apps and their screens on appshots.design by keyword and platform. " +
       "Returns each app with its screenshot image URLs for design reference. " +
-      "A search term (`query`) is required — an empty query returns nothing. " +
-      "Free accounts return up to 6 results per page; paginate with `page`.",
+      "A search term (`query`) is required. Matches app names and descriptions, " +
+      "so use a product or category term; paginate with `page`.",
     searchShape,
     async (a: SearchArgs) => text(formatAppShots(await client.searchAppShots(toOptions(a)))),
   );
@@ -204,8 +212,8 @@ async function main() {
           `User ID: ${c.user_id ?? s.uid ?? "unknown"}`,
           `Token expires: ${exp} (auto-refreshed)`,
           "",
-          "Plan (free vs PRO) isn't exposed by an endpoint. Tell-tale: free accounts get",
-          "blurred `/blur/` preview URLs for screens past the free limit.",
+          "No endpoint exposes the plan (free vs PRO), and no per-page cap was observed",
+          "on this account — `per_page` is honored up to the number of matches.",
         ].join("\n"),
       );
     },
