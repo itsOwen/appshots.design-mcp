@@ -1,0 +1,38 @@
+{
+  "name": "appshots-mcp",
+  "version": "0.1.0",
+  "description": "Unofficial MCP server for appshots.design — search apps, screens and flows, and view the screenshots",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "appshots-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && node --test test.mjs",
+    "start": "node dist/index.js",
+    "auth": "node dist/index.js auth",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "appshots",
+    "design",
+    "claude",
+    "model-context-protocol"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}
